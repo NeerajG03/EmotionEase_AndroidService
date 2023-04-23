@@ -90,11 +90,12 @@ fun MainPage(logo: Painter) {
         if (showSecondPage) {
             Box(
                 modifier = Modifier
+                    .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.5f))
             ) {
                 SecondPage(
                     onClose = { showSecondPage = false },
-                    modifier = Modifier.align(Alignment.TopCenter)
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }
@@ -111,7 +112,7 @@ fun SecondPage(onClose: () -> Unit,modifier: Modifier = Modifier) {
 
     ElevatedCard(
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.wrapContentSize(),
+        modifier = Modifier.wrapContentSize().padding(10.dp),
         colors = CardDefaults.elevatedCardColors()
     ) {
         Column(
@@ -173,12 +174,13 @@ fun SecondPage(onClose: () -> Unit,modifier: Modifier = Modifier) {
                 Checkbox(
                     checked = sarcasm,
                     onCheckedChange = { sarcasm = it },
-                    modifier = Modifier.padding()
+//                    modifier = Modifier.padding()
                 )
                 Text(
                     text = "Sarcastic",
                     style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 16.dp)
+                    modifier = Modifier.padding(top = 12.dp)
+
                 )
             }
             Row() {
