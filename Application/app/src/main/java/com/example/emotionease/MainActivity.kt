@@ -1,11 +1,15 @@
 package com.example.emotionease
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import org.tensorflow.lite.gpu.CompatibilityList
+import org.tensorflow.lite.gpu.GpuDelegate
+import android.util.Log
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.emotionease.ui.theme.EmotionEaseTheme
 import androidx.compose.foundation.Image
@@ -34,6 +38,11 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.emotionease.ml.Model
+import org.tensorflow.lite.DataType
+import org.tensorflow.lite.support.label.Category
+import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import java.util.concurrent.ScheduledThreadPoolExecutor
 
 
 class MainActivity : ComponentActivity() {
@@ -49,9 +58,63 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+@Composable
+fun JetpackComposeColumn() {
+    val values = listOf("Bert-Emotion", "MobileBert-Emotion", "MobileBert-Sarcasm", "AvgWrdVec-Sarcasm")
+    val selectedValue = remember { mutableStateOf(values[0]) }
+    val textValue = remember { mutableStateOf("") }
+    val expanded = remember { mutableStateOf(true) }
+
+    // A column to arrange the components vertically
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.SpaceAround
+    ) {
+        // A dropdown menu to select a value from the list
+        DropdownMenu(
+            expanded = expanded.value,
+            onDismissRequest = { expanded.value = false }
+        ) {
+            values.forEach { value ->
+                DropdownMenuItem(
+                    text = { Text(value) },
+                    onClick = { selectedValue.value = value
+                        expanded.value = false },
+                    )
+            }
+        }
+
+        // A textfield to enter some text
+        Row {
+            OutlinedTextField(
+                value = textValue.value,
+                onValueChange = { textValue.value = it },
+                label = { Text(text = "Enter some text") }
+            )
+            IconButton(
+                onClick = { expanded.value = true },
+                modifier = Modifier.padding(top = 10.dp)
+            ) {
+                Icon(Icons.Default.MoreVert, contentDescription = "Expansion")
+            }
+        }
+        // A button to submit the textfield value
+        Button(onClick = {
+            Log.d("TAG", selectedValue.value + " "  + textValue.value)
+            // Do something with the textfield value and the selected value
+        }) {
+            Text(text = "Submit")
+        }
+    }
+}
 
 @Composable
 fun MainPage(logo: Painter) {
+    val values = listOf("Value 1", "Value 2", "Value 3", "Value 4")
+    val selectedValue = remember { mutableStateOf(values[0]) }
+    val textValue = remember { mutableStateOf("") }
+    val expanded = remember { mutableStateOf(false) }
     var showSecondPage by remember { mutableStateOf(false) }
     Box(
         contentAlignment = Alignment.Center,
@@ -59,15 +122,19 @@ fun MainPage(logo: Painter) {
     ) {
 
         Column {
-            Image(
-                painter = logo,
-                contentDescription = "Logo",
-                modifier = Modifier.padding(horizontal = 50.dp),
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.inversePrimary)
-            )
+//            Image(
+//                painter = logo,
+//                contentDescription = "Logo",
+//                modifier = Modifier.padding(horizontal = 50.dp),
+//                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.inversePrimary)
+//            )
+
+            JetpackComposeColumn()
             Text(
                 text = "Emotion Ease",
-                modifier = Modifier.padding(top = 3.dp).align(Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .padding(top = 3.dp)
+                    .align(Alignment.CenterHorizontally),
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -112,7 +179,9 @@ fun SecondPage(onClose: () -> Unit,modifier: Modifier = Modifier) {
 
     ElevatedCard(
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.wrapContentSize().padding(10.dp),
+        modifier = Modifier
+            .wrapContentSize()
+            .padding(10.dp),
         colors = CardDefaults.elevatedCardColors()
     ) {
         Column(
