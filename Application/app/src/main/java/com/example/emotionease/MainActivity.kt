@@ -1,5 +1,6 @@
 package com.example.emotionease
 
+import android.content.Context
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
@@ -7,8 +8,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import org.tensorflow.lite.gpu.CompatibilityList
-import org.tensorflow.lite.gpu.GpuDelegate
 import android.util.Log
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.emotionease.ui.theme.EmotionEaseTheme
@@ -38,39 +37,140 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.emotionease.MainActivity.Companion.value
 import com.example.emotionease.ml.Model
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.label.Category
 import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+import org.tensorflow.lite.task.text.nlclassifier.BertNLClassifier
+import org.tensorflow.lite.task.text.nlclassifier.NLClassifier
 import java.util.concurrent.ScheduledThreadPoolExecutor
 
 
 class MainActivity : ComponentActivity() {
+    private lateinit var context: Context
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
+        context = this // initialize context here
         setContent {
             EmotionEaseTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-                    MainPage(logo = painterResource(id = R.drawable.logo))
+                    MainPage(logo = painterResource(id = R.drawable.logo),context = context)
                 }
             }
         }
     }
+    companion object {
+        var value  = ""
+    }
 }
+
+fun setVal(lmao : String){
+    value = lmao
+}
+fun findsarc(result : List<Category>): String{
+    if (result[0].score > result[1].score){
+        Log.d("Sarcasm result","Not sarcasm: "+result[0].score.toString())
+        return "Not sarcasm: "+result[0].score.toString()
+    }
+    else{
+        Log.d("Sarcasm result","sarcasm: "+result[1].score.toString())
+        return "Sarcasm: "+result[1].score.toString()
+    }
+}
+
+fun findemo(result : List<Category>): String{
+    val values = listOf(result[0].score, result[1].score,result[2].score, result[3].score,result[4].score)
+    val values_cat = listOf("Anger","Joy","Neutral","Sadness","Surprise")
+    val maxValue = values.maxOrNull()
+    val maxIndex = values.indexOf(maxValue)
+    val category = values_cat[maxIndex]
+
+    Log.d("Emotion result",category+": "+maxValue)
+    return category+": "+maxValue
+}
+
+fun predict(context: Context, text : String, model : String) : String{
+    var value : String = ""
+    val options = NLClassifier.NLClassifierOptions.builder().build()
+    val options2 = BertNLClassifier.BertNLClassifierOptions.builder().build()
+    if (model == "Bert-Emotion"){
+        Log.d("Chosen Model",model)
+        val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "bert_emotion.tflite", options2)
+        val executor = ScheduledThreadPoolExecutor(1)
+        executor.execute{
+            val results = nlClassifier.classify(text)
+            value = findemo(results)
+            set
+            Log.d("bruh please work",value)
+
+        }
+    }
+    else if(model=="MobileBert-Emotion"){
+        Log.d("Chosen Model",model)
+        val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "mobilebert_emotion.tflite", options2)
+        val executor = ScheduledThreadPoolExecutor(1)
+        executor.execute{
+            val results = nlClassifier.classify(text)
+            value = findemo(results)
+        }
+    }
+    else if(model=="MobileBert-Sarcasm"){
+        Log.d("Chosen Model",model)
+        val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "mobilebert_sarcasm.tflite", options2)
+        val executor = ScheduledThreadPoolExecutor(1)
+        executor.execute{
+            val results = nlClassifier.classify(text)
+            value = findsarc(results)
+        }
+    }
+    else{
+        Log.d("Chosen Model",model)
+        val nlClassifier = NLClassifier.createFromFileAndOptions(context, "model.tflite", options)
+        val executor = ScheduledThreadPoolExecutor(1)
+        executor.execute{
+            val results = nlClassifier.classify(text)
+            value = findsarc(results)
+        }
+
+    }
+    Log.d("is it cummins?",value)
+    return value
+//    val options = NLClassifier.NLClassifierOptions.builder().build()
+
+}
+
+
+
 @Composable
-fun JetpackComposeColumn() {
+fun JetpackComposeColumn(context: Context) {
+    var temp: String = ""
+    val text = remember{mutableStateOf("")}
     val values = listOf("Bert-Emotion", "MobileBert-Emotion", "MobileBert-Sarcasm", "AvgWrdVec-Sarcasm")
     val selectedValue = remember { mutableStateOf(values[0]) }
     val textValue = remember { mutableStateOf("") }
     val expanded = remember { mutableStateOf(true) }
-
+//    lateinit var context: Context
+    fun settextval(lmao : String){
+        text.value = lmao
+    }
     // A column to arrange the components vertically
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.SpaceAround
     ) {
+        Text(
+            text = text.value,
+            modifier = Modifier
+                .padding(top = 3.dp)
+                .align(Alignment.CenterHorizontally),
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.secondary,
+            fontWeight = FontWeight.Bold
+        )
         // A dropdown menu to select a value from the list
         DropdownMenu(
             expanded = expanded.value,
@@ -86,23 +186,35 @@ fun JetpackComposeColumn() {
         }
 
         // A textfield to enter some text
-        Row {
+
             OutlinedTextField(
                 value = textValue.value,
                 onValueChange = { textValue.value = it },
                 label = { Text(text = "Enter some text") }
             )
+        Row {
             IconButton(
                 onClick = { expanded.value = true },
                 modifier = Modifier.padding(top = 10.dp)
             ) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Expansion")
             }
+            Text(
+                text = "Model Choices",
+                modifier = Modifier
+                        .padding(top = 12.dp),
+
+            )
         }
         // A button to submit the textfield value
         Button(onClick = {
             Log.d("TAG", selectedValue.value + " "  + textValue.value)
-            // Do something with the textfield value and the selected value
+            text.value = predict(context = context, textValue.value,selectedValue.value)
+            Log.d("Result",text.value)
+            text.value = value
+            
+            Log.d("Result2",text.value)
+        // Do something with the textfield value and the selected value
         }) {
             Text(text = "Submit")
         }
@@ -110,7 +222,7 @@ fun JetpackComposeColumn() {
 }
 
 @Composable
-fun MainPage(logo: Painter) {
+fun MainPage(logo: Painter,context: Context) {
     val values = listOf("Value 1", "Value 2", "Value 3", "Value 4")
     val selectedValue = remember { mutableStateOf(values[0]) }
     val textValue = remember { mutableStateOf("") }
@@ -129,7 +241,8 @@ fun MainPage(logo: Painter) {
 //                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.inversePrimary)
 //            )
 
-            JetpackComposeColumn()
+
+            JetpackComposeColumn(context = context)
             Text(
                 text = "Emotion Ease",
                 modifier = Modifier
@@ -278,6 +391,6 @@ fun Greeting(name: String) {
 @Composable
 fun DefaultPreview() {
     EmotionEaseTheme {
-        MainPage(logo = painterResource(id = R.drawable.logo))
+//        MainPage(logo = painterResource(id = R.drawable.logo),)
     }
 }
