@@ -2,7 +2,6 @@ package com.example.emotionease
 
 import android.content.Context
 import android.os.Bundle
-import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,7 +13,6 @@ import com.example.emotionease.ui.theme.EmotionEaseTheme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -33,15 +31,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.emotionease.MainActivity.Companion.value
-import com.example.emotionease.ml.Model
-import org.tensorflow.lite.DataType
 import org.tensorflow.lite.support.label.Category
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
 import org.tensorflow.lite.task.text.nlclassifier.BertNLClassifier
 import org.tensorflow.lite.task.text.nlclassifier.NLClassifier
 import java.util.concurrent.ScheduledThreadPoolExecutor
@@ -55,21 +48,14 @@ class MainActivity : ComponentActivity() {
         context = this // initialize context here
         setContent {
             EmotionEaseTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
                     MainPage(logo = painterResource(id = R.drawable.logo),context = context)
                 }
             }
         }
     }
-    companion object {
-        var value  = ""
-    }
 }
 
-fun setVal(lmao : String){
-    value = lmao
-}
 fun findsarc(result : List<Category>): String{
     if (result[0].score > result[1].score){
         Log.d("Sarcasm result","Not sarcasm: "+result[0].score.toString())
@@ -92,70 +78,62 @@ fun findemo(result : List<Category>): String{
     return category+": "+maxValue
 }
 
-fun predict(context: Context, text : String, model : String) : String{
-    var value : String = ""
-    val options = NLClassifier.NLClassifierOptions.builder().build()
-    val options2 = BertNLClassifier.BertNLClassifierOptions.builder().build()
-    if (model == "Bert-Emotion"){
-        Log.d("Chosen Model",model)
-        val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "bert_emotion.tflite", options2)
-        val executor = ScheduledThreadPoolExecutor(1)
-        executor.execute{
-            val results = nlClassifier.classify(text)
-            value = findemo(results)
-            set
-            Log.d("bruh please work",value)
-
-        }
-    }
-    else if(model=="MobileBert-Emotion"){
-        Log.d("Chosen Model",model)
-        val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "mobilebert_emotion.tflite", options2)
-        val executor = ScheduledThreadPoolExecutor(1)
-        executor.execute{
-            val results = nlClassifier.classify(text)
-            value = findemo(results)
-        }
-    }
-    else if(model=="MobileBert-Sarcasm"){
-        Log.d("Chosen Model",model)
-        val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "mobilebert_sarcasm.tflite", options2)
-        val executor = ScheduledThreadPoolExecutor(1)
-        executor.execute{
-            val results = nlClassifier.classify(text)
-            value = findsarc(results)
-        }
-    }
-    else{
-        Log.d("Chosen Model",model)
-        val nlClassifier = NLClassifier.createFromFileAndOptions(context, "model.tflite", options)
-        val executor = ScheduledThreadPoolExecutor(1)
-        executor.execute{
-            val results = nlClassifier.classify(text)
-            value = findsarc(results)
-        }
-
-    }
-    Log.d("is it cummins?",value)
-    return value
-//    val options = NLClassifier.NLClassifierOptions.builder().build()
-
-}
-
 
 
 @Composable
 fun JetpackComposeColumn(context: Context) {
-    var temp: String = ""
-    val text = remember{mutableStateOf("")}
+
+    val textV = remember{mutableStateOf("result")}
     val values = listOf("Bert-Emotion", "MobileBert-Emotion", "MobileBert-Sarcasm", "AvgWrdVec-Sarcasm")
     val selectedValue = remember { mutableStateOf(values[0]) }
     val textValue = remember { mutableStateOf("") }
     val expanded = remember { mutableStateOf(true) }
-//    lateinit var context: Context
-    fun settextval(lmao : String){
-        text.value = lmao
+
+    fun predict(context: Context, text : String, model : String) : String{
+        var value : String = ""
+        val options = NLClassifier.NLClassifierOptions.builder().build()
+        val options2 = BertNLClassifier.BertNLClassifierOptions.builder().build()
+        if (model == "Bert-Emotion"){
+            Log.d("Chosen Model",model)
+            val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "bert_emotion.tflite", options2)
+            val executor = ScheduledThreadPoolExecutor(1)
+            executor.execute{
+                val results = nlClassifier.classify(text)
+                textV.value = findemo(results)
+            }
+        }
+        else if(model=="MobileBert-Emotion"){
+            Log.d("Chosen Model",model)
+            val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "mobilebert_emotion.tflite", options2)
+            val executor = ScheduledThreadPoolExecutor(1)
+            executor.execute{
+                val results = nlClassifier.classify(text)
+                textV.value = findemo(results)
+            }
+        }
+        else if(model=="MobileBert-Sarcasm"){
+            Log.d("Chosen Model",model)
+            val nlClassifier = BertNLClassifier.createFromFileAndOptions(context, "mobilebert_sarcasm.tflite", options2)
+            val executor = ScheduledThreadPoolExecutor(1)
+            executor.execute{
+                val results = nlClassifier.classify(text)
+                textV.value = findsarc(results)
+            }
+        }
+        else{
+            Log.d("Chosen Model",model)
+            val nlClassifier = NLClassifier.createFromFileAndOptions(context, "model.tflite", options)
+            val executor = ScheduledThreadPoolExecutor(1)
+            executor.execute{
+                val results = nlClassifier.classify(text)
+                textV.value = findsarc(results)
+            }
+
+        }
+        Log.d("Predict Function",value)
+        return value
     }
+
     // A column to arrange the components vertically
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -163,11 +141,11 @@ fun JetpackComposeColumn(context: Context) {
         verticalArrangement = Arrangement.SpaceAround
     ) {
         Text(
-            text = text.value,
+            text = textV.value,
             modifier = Modifier
-                .padding(top = 3.dp)
-                .align(Alignment.CenterHorizontally),
-            style = MaterialTheme.typography.displaySmall,
+                .padding(top = 3.dp, bottom = 10.dp, start = 47.dp)
+                .align(Alignment.Start),
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.secondary,
             fontWeight = FontWeight.Bold
         )
@@ -187,36 +165,49 @@ fun JetpackComposeColumn(context: Context) {
 
         // A textfield to enter some text
 
-            OutlinedTextField(
+        OutlinedTextField(
                 value = textValue.value,
                 onValueChange = { textValue.value = it },
-                label = { Text(text = "Enter some text") }
+                label = { Text(text = "Enter sentence") }
             )
-        Row {
-            IconButton(
-                onClick = { expanded.value = true },
-                modifier = Modifier.padding(top = 10.dp)
-            ) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Expansion")
-            }
-            Text(
-                text = "Model Choices",
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ){
+            Row(
                 modifier = Modifier
-                        .padding(top = 12.dp),
-
-            )
-        }
-        // A button to submit the textfield value
-        Button(onClick = {
-            Log.d("TAG", selectedValue.value + " "  + textValue.value)
-            text.value = predict(context = context, textValue.value,selectedValue.value)
-            Log.d("Result",text.value)
-            text.value = value
-            
-            Log.d("Result2",text.value)
-        // Do something with the textfield value and the selected value
-        }) {
-            Text(text = "Submit")
+//                    .align(Alignment.Start)
+                    .padding(start = 10.dp, end = 10.dp)
+            ) {
+                IconButton(
+                    onClick = { expanded.value = true },
+                    modifier = Modifier.padding(top = 10.dp)
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Expansion")
+                }
+                Text(
+                    text = "Models",
+                    modifier = Modifier
+                        .padding(top = 22.dp, bottom = 20.dp),
+                )
+            }
+            // A button to submit the textfield value
+            Spacer(modifier = Modifier.weight(1f))
+            Row {
+                Button(
+                    modifier = Modifier.padding(top = 10.dp, end = 20.dp),
+                    onClick = {
+                        Log.d("TAG", selectedValue.value + " " + textValue.value)
+                        textV.value =
+                            predict(context = context, textValue.value, selectedValue.value)
+                        Log.d("Result", textV.value)
+                    }
+                ) {
+                    Text(text = "Submit")
+                }
+            }
         }
     }
 }
@@ -234,15 +225,12 @@ fun MainPage(logo: Painter,context: Context) {
     ) {
 
         Column {
-//            Image(
-//                painter = logo,
-//                contentDescription = "Logo",
-//                modifier = Modifier.padding(horizontal = 50.dp),
-//                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.inversePrimary)
-//            )
-
-
-            JetpackComposeColumn(context = context)
+            Image(
+                painter = logo,
+                contentDescription = "Logo",
+                modifier = Modifier.padding(horizontal = 50.dp),
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.inversePrimary)
+            )
             Text(
                 text = "Emotion Ease",
                 modifier = Modifier
@@ -252,6 +240,10 @@ fun MainPage(logo: Painter,context: Context) {
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
             )
+
+
+            JetpackComposeColumn(context = context)
+
         }
         Surface(
             color = MaterialTheme.colorScheme.primary,
